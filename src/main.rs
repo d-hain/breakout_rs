@@ -15,7 +15,13 @@ struct Window {
 struct Paddle {
     rect: Rect,
     speed: i32,
+}
+
+struct Ball {
+    rect: Rect,
     // image: Image, // TODO: cannot get Image to load
+    // image: Image::from_path(&context, "/ltt-logo.png").expect("Loading paddle image failed!"),
+    //             //TODO: cannot get Image to load
 }
 
 struct GameState {
@@ -81,8 +87,6 @@ fn main() {
                 window.height / 20.0,
             ),
             speed: 1,
-            // image: Image::from_path(&context, "/ltt-logo.png").expect("Loading paddle image failed!"),
-            //TODO: cannot get Image to load
         },
     };
 
