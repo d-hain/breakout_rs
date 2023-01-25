@@ -44,12 +44,12 @@ struct GameState {
 impl event::EventHandler<GameError> for GameState {
     fn update(&mut self, context: &mut Context) -> Result<(), GameError> {
         const TARGET_UPS: u32 = 60;
-
+        
         while context.time.check_update_time(TARGET_UPS) {
             self.delta_time = context.time.delta();
             
             // move player
-            match self.player.direction { 
+            match self.player.direction {
                 Some(Direction::Left) => self.player.rect.x -= self.player.speed,
                 Some(Direction::Right) => self.player.rect.x += self.player.speed,
                 None => (),
