@@ -2,11 +2,32 @@
 
 use ggez::*;
 use ggez::conf::{Conf, WindowMode, WindowSetup};
+use ggez::event::ScanCode;
 use ggez::graphics::{Color, DrawParam, Quad, Rect, Text};
+use ggez::input::keyboard::KeyInput;
 
-struct Paddle {
+enum Direction {
+    Left,
+    Right,
+}
+
+impl Direction {
+    /// Returns a [`Direction`] from a [`ScanCode`]
+    fn from_scancode(scancode: ScanCode) -> Option<Self> {
+        match scancode {
+            // ScanCode for [`KeyCode::A`] | [`KeyCode::Left`]
+            30 | 57419 => Some(Direction::Left),
+            // ScanCode for [`KeyCode::D`] | [`KeyCode::Right`]
+            32 | 57421 => Some(Direction::Right),
+            _ => None
+        }
+    }
+}
+
+struct PlayerPaddle {
     rect: Rect,
-    speed: i32,
+    speed: f32,
+    direction: Option<Direction>,
 }
 
 struct Ball {
@@ -17,7 +38,7 @@ struct Ball {
 
 struct GameState {
     delta_time: std::time::Duration,
-    paddle: Paddle,
+    player: PlayerPaddle,
 }
 
 impl event::EventHandler<GameError> for GameState {
@@ -26,6 +47,14 @@ impl event::EventHandler<GameError> for GameState {
 
         while context.time.check_update_time(TARGET_UPS) {
             self.delta_time = context.time.delta();
+            
+            // move player
+            match self.player.direction { 
+                Some(Direction::Left) => self.player.rect.x -= self.player.speed,
+                Some(Direction::Right) => self.player.rect.x += self.player.speed,
+                None => (),
+            }
+            self.player.direction = None;
         }
 
         Ok(())
@@ -36,14 +65,14 @@ impl event::EventHandler<GameError> for GameState {
 
         // draw fps counter
         let fps = context.time.fps();
-        let fps_display = Text::new(format!("FPS: {}", fps));
+        let fps_display = Text::new(format!("FPS: {:.2}", fps));
         canvas.draw(
             &fps_display,
             DrawParam::from([0.0, 0.0]).color(Color::WHITE),
         );
 
         // draw paddle
-        let paddle_rect = &self.paddle.rect;
+        let paddle_rect = &self.player.rect;
         canvas.draw(
             &Quad,
             DrawParam::new()
@@ -53,6 +82,12 @@ impl event::EventHandler<GameError> for GameState {
         );
 
         canvas.finish(context)?;
+        Ok(())
+    }
+
+    fn key_down_event(&mut self, context: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
+        self.player.direction = Direction::from_scancode(input.scancode);
+        
         Ok(())
     }
 }
@@ -66,14 +101,15 @@ fn main() {
 
     let game_state = GameState {
         delta_time: std::time::Duration::new(0, 0),
-        paddle: Paddle {
+        player: PlayerPaddle {
             rect: Rect::new(
                 width / 10.0,
                 height - (height / 10.0),
                 width / 10.0,
                 height / 20.0,
             ),
-            speed: 1,
+            speed: 10.0,
+            direction: None
         },
     };
 
