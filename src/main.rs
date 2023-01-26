@@ -5,6 +5,7 @@ use ggez::conf::{Conf, WindowMode, WindowSetup};
 use ggez::event::ScanCode;
 use ggez::graphics::{Color, DrawParam, Quad, Rect, Text};
 use ggez::input::keyboard::KeyInput;
+use ggez::mint::Point2;
 
 enum Direction {
     Left,
@@ -31,23 +32,24 @@ struct PlayerPaddle {
 }
 
 struct Ball {
-    rect: Rect,
-    // image: Image, // TODO: cannot get Image to load
-    // image: Image::from_path(&context, "/ltt-logo.png").expect("Loading paddle image failed!"),
+    position: Point2<f32>,
+    radius: f32,
+    speed: f32,
 }
 
 struct GameState {
     delta_time: std::time::Duration,
     player: PlayerPaddle,
+    ball: Ball,
 }
 
 impl event::EventHandler<GameError> for GameState {
     fn update(&mut self, context: &mut Context) -> Result<(), GameError> {
         const TARGET_UPS: u32 = 60;
-        
+
         while context.time.check_update_time(TARGET_UPS) {
             self.delta_time = context.time.delta();
-            
+
             // move player
             match self.player.direction {
                 Some(Direction::Left) => self.player.rect.x -= self.player.speed,
@@ -55,7 +57,7 @@ impl event::EventHandler<GameError> for GameState {
                 None => (),
             }
             self.player.direction = None;
-            
+
             force_player_boundaries(&mut self.player, context);
         }
 
@@ -83,28 +85,40 @@ impl event::EventHandler<GameError> for GameState {
                 .color(Color::WHITE),
         );
 
+        // draw ball
+        let ball_mesh_builder = &mut graphics::MeshBuilder::new();
+        ball_mesh_builder.circle(
+            graphics::DrawMode::fill(),
+            self.ball.position,
+            self.ball.radius,
+            1.0,
+            Color::WHITE,
+        )?;
+        let ball_mesh = graphics::Mesh::from_data(context, ball_mesh_builder.build());
+        canvas.draw(&ball_mesh, DrawParam::new());
+
         canvas.finish(context)?;
         Ok(())
     }
 
-    fn key_down_event(&mut self, context: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
+    fn key_down_event(&mut self, _context: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
         self.player.direction = Direction::from_scancode(input.scancode);
-        
+
         Ok(())
     }
 }
 
 /// Keep player on the screen
-fn  force_player_boundaries(player: &mut PlayerPaddle, context: &Context){
+fn force_player_boundaries(player: &mut PlayerPaddle, context: &Context) {
     // Left Border
-    if player.rect.x <= 0.0 { 
+    if player.rect.x <= 0.0 {
         player.rect.x = 0.0;
         return;
     }
 
     // Right Border
     let window_width = context.gfx.window().inner_size().width as f32;
-    if (player.rect.x + player.rect.w) >= window_width { 
+    if (player.rect.x + player.rect.w) >= window_width {
         player.rect.x = window_width - player.rect.w;
     }
 }
@@ -126,7 +140,15 @@ fn main() {
                 height / 20.0,
             ),
             speed: 10.0,
-            direction: None
+            direction: None,
+        },
+        ball: Ball {
+            position: Point2 {
+                x: width / 2.0,
+                y: height / 2.0,
+            },
+            radius: 20.0,
+            speed: 10.0,
         },
     };
 
