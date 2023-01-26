@@ -55,6 +55,8 @@ impl event::EventHandler<GameError> for GameState {
                 None => (),
             }
             self.player.direction = None;
+            
+            force_player_boundaries(&mut self.player, context);
         }
 
         Ok(())
@@ -89,6 +91,21 @@ impl event::EventHandler<GameError> for GameState {
         self.player.direction = Direction::from_scancode(input.scancode);
         
         Ok(())
+    }
+}
+
+/// Keep player on the screen
+fn  force_player_boundaries(player: &mut PlayerPaddle, context: &Context){
+    // Left Border
+    if player.rect.x <= 0.0 { 
+        player.rect.x = 0.0;
+        return;
+    }
+
+    // Right Border
+    let window_width = context.gfx.window().inner_size().width as f32;
+    if (player.rect.x + player.rect.w) >= window_width { 
+        player.rect.x = window_width - player.rect.w;
     }
 }
 
