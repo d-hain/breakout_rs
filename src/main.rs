@@ -1,4 +1,5 @@
 #![warn(clippy::unwrap_used)]
+#![allow(clippy::uninlined_format_args)]
 
 use ggez::*;
 use ggez::conf::{Conf, WindowMode, WindowSetup};
@@ -34,7 +35,7 @@ struct PlayerPaddle {
 struct Ball {
     position: Point2<f32>,
     radius: f32,
-    speed: f32,
+    speed: Point2<f32>,
 }
 
 struct GameState {
@@ -47,6 +48,7 @@ impl event::EventHandler<GameError> for GameState {
     fn update(&mut self, context: &mut Context) -> Result<(), GameError> {
         const TARGET_UPS: u32 = 60;
 
+        // only run at 60 UPS (Updates Per Second)
         while context.time.check_update_time(TARGET_UPS) {
             self.delta_time = context.time.delta();
 
@@ -57,8 +59,14 @@ impl event::EventHandler<GameError> for GameState {
                 None => (),
             }
             self.player.direction = None;
+            
+            // move ball
+            // self.ball.position = context.mouse.position();
+            self.ball.position.x += self.ball.speed.x;
+            // self.ball.position.y += self.ball.speed.y;
 
             force_player_boundaries(&mut self.player, context);
+            // ball_wall_collisions(&mut self.ball, context);
         }
 
         Ok(())
@@ -91,7 +99,7 @@ impl event::EventHandler<GameError> for GameState {
             graphics::DrawMode::fill(),
             self.ball.position,
             self.ball.radius,
-            1.0,
+            0.69,
             Color::WHITE,
         )?;
         let ball_mesh = graphics::Mesh::from_data(context, ball_mesh_builder.build());
@@ -105,6 +113,32 @@ impl event::EventHandler<GameError> for GameState {
         self.player.direction = Direction::from_scancode(input.scancode);
 
         Ok(())
+    }
+}
+
+fn ball_wall_collisions(ball: &mut Ball, context: &Context){
+    let window_width = context.gfx.window().inner_size().width as f32;
+    
+    // Left & Right border
+    if (ball.position.x - ball.radius) <= 0.0 || (ball.position.x + ball.radius) >= window_width{
+        println!("LEFT");
+        println!("RIGHT");
+        
+        if ball.speed.x < 0.0 && ball.speed.y > 0.0 {
+            ball.speed.x = -ball.speed.x;
+        }
+        if ball.speed.x < 0.0 && ball.speed.y < 0.0 {
+            ball.speed.x = -ball.speed.x;
+            ball.speed.y = -ball.speed.y;
+        }
+        if ball.speed.x < 0.0 && ball.speed.y == 0.0 {
+            ball.speed.x = -ball.speed.x;
+        }
+    }
+    
+    // Top border
+    if (ball.position.y - ball.radius) <= 0.0 {
+        println!("TOP");
     }
 }
 
@@ -148,7 +182,10 @@ fn main() {
                 y: height / 2.0,
             },
             radius: 20.0,
-            speed: 10.0,
+            speed: Point2 {
+                x: 1.0,
+                y: 1.0,
+            },
         },
     };
 
