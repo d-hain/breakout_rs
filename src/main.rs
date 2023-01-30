@@ -59,14 +59,14 @@ impl event::EventHandler<GameError> for GameState {
                 None => (),
             }
             self.player.direction = None;
-            
+
             // move ball
             // self.ball.position = context.mouse.position();
             self.ball.position.x += self.ball.speed.x;
-            // self.ball.position.y += self.ball.speed.y;
+            self.ball.position.y -= self.ball.speed.y;
 
             force_player_boundaries(&mut self.player, context);
-            // ball_wall_collisions(&mut self.ball, context);
+            ball_wall_collisions(&mut self.ball, context);
         }
 
         Ok(())
@@ -116,29 +116,20 @@ impl event::EventHandler<GameError> for GameState {
     }
 }
 
-fn ball_wall_collisions(ball: &mut Ball, context: &Context){
+fn ball_wall_collisions(ball: &mut Ball, context: &Context) {
     let window_width = context.gfx.window().inner_size().width as f32;
-    
+
     // Left & Right border
-    if (ball.position.x - ball.radius) <= 0.0 || (ball.position.x + ball.radius) >= window_width{
-        println!("LEFT");
-        println!("RIGHT");
-        
-        if ball.speed.x < 0.0 && ball.speed.y > 0.0 {
-            ball.speed.x = -ball.speed.x;
-        }
-        if ball.speed.x < 0.0 && ball.speed.y < 0.0 {
-            ball.speed.x = -ball.speed.x;
+    if (ball.position.x - ball.radius) <= 0.0 || (ball.position.x + ball.radius) >= window_width {
+        if ball.speed.y < 0.0 {
             ball.speed.y = -ball.speed.y;
         }
-        if ball.speed.x < 0.0 && ball.speed.y == 0.0 {
-            ball.speed.x = -ball.speed.x;
-        }
+        ball.speed.x = -ball.speed.x;
     }
-    
+
     // Top border
     if (ball.position.y - ball.radius) <= 0.0 {
-        println!("TOP");
+        ball.speed.y = -ball.speed.y;
     }
 }
 
@@ -183,8 +174,8 @@ fn main() {
             },
             radius: 20.0,
             speed: Point2 {
-                x: 1.0,
-                y: 1.0,
+                x: 7.0,
+                y: 7.0,
             },
         },
     };
