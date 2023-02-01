@@ -32,41 +32,56 @@ struct PlayerPaddle {
     direction: Option<Direction>,
 }
 
+impl PlayerPaddle {
+    /// Moves the [`PlayerPaddle`] depending on its [`Direction`]
+    fn move_self(&mut self) {
+        match self.direction {
+            Some(Direction::Left) => self.rect.x -= self.speed,
+            Some(Direction::Right) => self.rect.x += self.speed,
+            None => (),
+        }
+        self.direction = None;
+    }
+}
+
 struct Ball {
     position: Point2<f32>,
     radius: f32,
     speed: Point2<f32>,
 }
 
+struct WinLoseRect {
+    rect: Rect,
+    radius: f32,
+}
+
 struct GameState {
     delta_time: std::time::Duration,
+    has_won: bool,
+    win_lose_rect: WinLoseRect,
     player: PlayerPaddle,
     ball: Ball,
 }
 
 impl event::EventHandler<GameError> for GameState {
     fn update(&mut self, context: &mut Context) -> Result<(), GameError> {
-        const TARGET_UPS: u32 = 60;
-
         // only run at 60 UPS (Updates Per Second)
         while context.time.check_update_time(TARGET_UPS) {
             self.delta_time = context.time.delta();
 
             // move player
-            match self.player.direction {
-                Some(Direction::Left) => self.player.rect.x -= self.player.speed,
-                Some(Direction::Right) => self.player.rect.x += self.player.speed,
-                None => (),
-            }
-            self.player.direction = None;
+            self.player.move_self();
 
-            // move ball
-            // self.ball.position = context.mouse.position();
+            // move ball //TODO: TEMP
             self.ball.position.x += self.ball.speed.x;
             self.ball.position.y -= self.ball.speed.y;
 
             force_player_boundaries(&mut self.player, context);
             ball_wall_collisions(&mut self.ball, context);
+            
+            if check_game_lose(&self.ball, context) {
+                self.has_won = true;
+            }
         }
 
         Ok(())
@@ -105,6 +120,21 @@ impl event::EventHandler<GameError> for GameState {
         let ball_mesh = graphics::Mesh::from_data(context, ball_mesh_builder.build());
         canvas.draw(&ball_mesh, DrawParam::new());
 
+        // display win or lose
+        if self.has_won {
+            let mesh_builder = &mut graphics::MeshBuilder::new();
+            mesh_builder.rounded_rectangle(
+                graphics::DrawMode::fill(),
+                self.win_lose_rect.rect,
+                self.win_lose_rect.radius,
+                Color::WHITE,
+            )?;
+            let win_lose_mesh = graphics::Mesh::from_data(context, mesh_builder.build());
+            canvas.draw(&win_lose_mesh, DrawParam::new());
+        } else {
+            //TODO: lose
+        }
+        
         canvas.finish(context)?;
         Ok(())
     }
@@ -121,16 +151,19 @@ fn ball_wall_collisions(ball: &mut Ball, context: &Context) {
 
     // Left & Right border
     if (ball.position.x - ball.radius) <= 0.0 || (ball.position.x + ball.radius) >= window_width {
-        if ball.speed.y < 0.0 {
-            ball.speed.y = -ball.speed.y;
-        }
         ball.speed.x = -ball.speed.x;
     }
-
     // Top border
     if (ball.position.y - ball.radius) <= 0.0 {
         ball.speed.y = -ball.speed.y;
     }
+}
+
+/// Checks if the [`Ball`] is touching the bottom window border
+fn check_game_lose(ball: &Ball, context: &Context) -> bool{
+    let window_height = context.gfx.window().inner_size().height as f32;
+    
+    (ball.position.y + ball.radius) >= window_height
 }
 
 /// Keep player on the screen
@@ -148,15 +181,32 @@ fn force_player_boundaries(player: &mut PlayerPaddle, context: &Context) {
     }
 }
 
+const TARGET_UPS: u32 = 60;
+const WINDOW_TITLE: &str = "breakout_rs";
+// const BACKGROUND_COLOR: Color = Color::from_rgba(26, 128, 77, 255);
+// const FPS_TEXT_COLOR: Color = Color::from_rgba()
+
 fn main() {
     let (conf, (width, height)) = setup_conf();
-    let (context, event_loop) = ContextBuilder::new("breakout_rs", "DocE")
+    let (context, event_loop) = ContextBuilder::new(WINDOW_TITLE, "DocE")
         .default_conf(conf)
         .build()
         .expect("Building context failed!");
 
+    let win_lose_rect_width = width / 3.0;
+    let win_lose_rect_height = height / 5.0;
     let game_state = GameState {
         delta_time: std::time::Duration::new(0, 0),
+        has_won: false,
+        win_lose_rect: WinLoseRect {
+            rect: Rect::new(
+            (width / 2.0) - (win_lose_rect_width / 2.0),
+            (height / 2.0) - (win_lose_rect_height / 2.0),
+            win_lose_rect_width,
+            win_lose_rect_height,
+            ),
+            radius: 32.0,
+        },
         player: PlayerPaddle {
             rect: Rect::new(
                 width / 10.0,
@@ -193,12 +243,11 @@ fn setup_conf() -> (Conf, (f32, f32)) {
             height,
             min_width,
             min_height,
-            resizable: true,
             ..WindowMode::default()
         },
         window_setup: WindowSetup {
-            title: "breakout_rs".to_string(),
-            icon: "".to_string(),
+            title: WINDOW_TITLE.to_owned(),
+            icon: "".to_owned(),
             ..WindowSetup::default()
         },
         ..Conf::default()
