@@ -146,6 +146,7 @@ impl event::EventHandler<GameError> for GameState {
     }
 }
 
+/// Wall collisions of the [`Ball`]
 fn ball_wall_collisions(ball: &mut Ball, context: &Context) {
     let window_width = context.gfx.window().inner_size().width as f32;
 
