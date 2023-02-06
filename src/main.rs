@@ -57,7 +57,7 @@ struct WinLoseRect {
 
 struct GameState {
     delta_time: std::time::Duration,
-    has_won: bool,
+    has_won: Option<bool>,
     win_lose_rect: WinLoseRect,
     player: PlayerPaddle,
     ball: Ball,
@@ -80,7 +80,7 @@ impl event::EventHandler<GameError> for GameState {
             ball_wall_collisions(&mut self.ball, context);
             
             if check_game_lose(&self.ball, context) {
-                self.has_won = true;
+                self.has_won = Some(false);
             }
         }
 
@@ -121,18 +121,20 @@ impl event::EventHandler<GameError> for GameState {
         canvas.draw(&ball_mesh, DrawParam::new());
 
         // display win or lose
-        if self.has_won {
-            let mesh_builder = &mut graphics::MeshBuilder::new();
-            mesh_builder.rounded_rectangle(
-                graphics::DrawMode::fill(),
-                self.win_lose_rect.rect,
-                self.win_lose_rect.radius,
-                Color::WHITE,
-            )?;
-            let win_lose_mesh = graphics::Mesh::from_data(context, mesh_builder.build());
-            canvas.draw(&win_lose_mesh, DrawParam::new());
-        } else {
-            //TODO: lose
+        if let Some(has_won) = self.has_won {
+            if has_won {
+                let mesh_builder = &mut graphics::MeshBuilder::new();
+                mesh_builder.rounded_rectangle(
+                    graphics::DrawMode::fill(),
+                    self.win_lose_rect.rect,
+                    self.win_lose_rect.radius,
+                    Color::WHITE,
+                )?;
+                let win_lose_mesh = graphics::Mesh::from_data(context, mesh_builder.build());
+                canvas.draw(&win_lose_mesh, DrawParam::new());
+            } else {
+                //TODO: lose
+            }
         }
         
         canvas.finish(context)?;
@@ -198,7 +200,7 @@ fn main() {
     let win_lose_rect_height = height / 5.0;
     let game_state = GameState {
         delta_time: std::time::Duration::new(0, 0),
-        has_won: false,
+        has_won: None,
         win_lose_rect: WinLoseRect {
             rect: Rect::new(
             (width / 2.0) - (win_lose_rect_width / 2.0),
